@@ -1,0 +1,14 @@
+.DS_Store
+.idea/
+.vscode/
+.worktrees/
+*.iml
+
+target/
+out/
+*.class
+
+data/*.db
+data/*.db-*
+logs/
+*.log
