@@ -10,5 +10,6 @@ out/
 
 data/*.db
 data/*.db-*
+backups/
 logs/
 *.log

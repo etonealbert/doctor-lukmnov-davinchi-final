@@ -1,6 +1,8 @@
 package ar.edu.doctorlukmanov.vista;
 
+import ar.edu.doctorlukmanov.controlador.ControladorSistema;
 import ar.edu.doctorlukmanov.estrategia.TipoReporte;
+import ar.edu.doctorlukmanov.excepcion.ClinicaException;
 import ar.edu.doctorlukmanov.vista.cliente.PanelClientes;
 import ar.edu.doctorlukmanov.vista.componentes.Dialogos;
 import ar.edu.doctorlukmanov.vista.gato.PanelGatos;
@@ -53,7 +55,7 @@ public final class VentanaPrincipal extends JFrame {
     private final PanelVeterinarios panelVeterinarios;
     private final PanelTratamientos panelTratamientos;
     private final PanelReportes panelReportes;
-    private final Runnable respaldarBaseDatos;
+    private final ControladorSistema controladorSistema;
 
     public VentanaPrincipal(
             PanelClientes panelClientes,
@@ -62,7 +64,7 @@ public final class VentanaPrincipal extends JFrame {
             PanelVeterinarios panelVeterinarios,
             PanelTratamientos panelTratamientos,
             PanelReportes panelReportes,
-            Runnable respaldarBaseDatos) {
+            ControladorSistema controladorSistema) {
         super("Clínica Veterinaria Doctor Lukmanov - Gestión Felina");
         this.panelClientes = panelClientes;
         this.panelGatos = panelGatos;
@@ -70,7 +72,7 @@ public final class VentanaPrincipal extends JFrame {
         this.panelVeterinarios = panelVeterinarios;
         this.panelTratamientos = panelTratamientos;
         this.panelReportes = panelReportes;
-        this.respaldarBaseDatos = respaldarBaseDatos;
+        this.controladorSistema = controladorSistema;
         configurarVentana();
         conectarFlujos();
     }
@@ -195,7 +197,7 @@ public final class VentanaPrincipal extends JFrame {
         JMenuBar barra = new JMenuBar();
         JMenu archivo = menu("Archivo", 'A');
         archivo.add(item("Inicio", () -> mostrarPanel(INICIO)));
-        archivo.add(item("Respaldar base de datos", respaldarBaseDatos));
+        archivo.add(item("Respaldar base de datos", this::respaldarBaseDatos));
         archivo.addSeparator();
         archivo.add(item("Salir", this::salir));
 
@@ -301,6 +303,15 @@ public final class VentanaPrincipal extends JFrame {
     private void salir() {
         if (Dialogos.confirmar(this, "¿Desea cerrar la aplicación?")) {
             dispose();
+        }
+    }
+
+    private void respaldarBaseDatos() {
+        try {
+            java.nio.file.Path destino = controladorSistema.respaldarBaseDatos();
+            Dialogos.informar(this, "El respaldo fue creado en:\n" + destino.toAbsolutePath());
+        } catch (ClinicaException ex) {
+            Dialogos.error(this, ex.getMessage());
         }
     }
 }
