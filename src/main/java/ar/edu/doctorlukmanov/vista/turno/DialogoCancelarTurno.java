@@ -39,7 +39,7 @@ public final class DialogoCancelarTurno {
                 cancelar.accept(motivo.getText());
                 return true;
             } catch (ClinicaException ex) {
-                Dialogos.error(padre, ex.getMessage());
+                Dialogos.error(padre, ex);
             }
         }
         return false;

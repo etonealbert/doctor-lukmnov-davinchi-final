@@ -87,7 +87,7 @@ public final class DialogoGato {
                         observaciones.getText()));
                 return true;
             } catch (ClinicaException ex) {
-                Dialogos.error(padre, ex.getMessage());
+                Dialogos.error(padre, ex);
             }
         }
         return false;

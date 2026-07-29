@@ -44,13 +44,15 @@ public final class DialogoTurno {
         Runnable cargarGatos = () -> {
             Cliente seleccionado = (Cliente) cliente.getSelectedItem();
             Gato anterior = (Gato) gato.getSelectedItem();
+            List<Gato> disponibles = gatos.stream()
+                    .filter(item -> seleccionado != null
+                            && item.getIdCliente().equals(seleccionado.getIdCliente()))
+                    .toList();
             gato.removeAllItems();
-            gatos.stream()
-                    .filter(item -> seleccionado != null && item.getIdCliente().equals(seleccionado.getIdCliente()))
-                    .forEach(gato::addItem);
+            disponibles.forEach(gato::addItem);
             Gato objetivo = anterior != null ? anterior : gatoPreferido;
             if (objetivo != null) {
-                gatos.stream().filter(item -> item.getIdGato().equals(objetivo.getIdGato()))
+                disponibles.stream().filter(item -> item.getIdGato().equals(objetivo.getIdGato()))
                         .findFirst().ifPresent(gato::setSelectedItem);
             }
         };
@@ -95,7 +97,7 @@ public final class DialogoTurno {
                         observaciones.getText()));
                 return true;
             } catch (ClinicaException ex) {
-                Dialogos.error(padre, ex.getMessage());
+                Dialogos.error(padre, ex);
             }
         }
         return false;

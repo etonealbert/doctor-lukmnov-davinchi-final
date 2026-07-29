@@ -1,6 +1,7 @@
 package ar.edu.doctorlukmanov.dao;
 
 import ar.edu.doctorlukmanov.modelo.Turno;
+import ar.edu.doctorlukmanov.modelo.EstadoTurno;
 import java.sql.Connection;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,4 +21,9 @@ public interface TurnoDao extends DaoCrud<Turno, Long> {
             Long idExcluir);
 
     boolean actualizar(Connection conexion, Turno turno);
+
+    boolean actualizarSiEstadoActual(Turno turno, EstadoTurno estadoEsperado);
+
+    boolean actualizarSiEstadoActual(
+            Connection conexion, Turno turno, EstadoTurno estadoEsperado);
 }

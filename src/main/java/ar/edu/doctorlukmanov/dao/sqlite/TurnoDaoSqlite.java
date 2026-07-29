@@ -133,12 +133,36 @@ public final class TurnoDaoSqlite implements TurnoDao {
 
     @Override
     public boolean actualizar(Connection conexion, Turno turno) {
+        return actualizar(conexion, turno, null);
+    }
+
+    @Override
+    public boolean actualizarSiEstadoActual(Turno turno, EstadoTurno estadoEsperado) {
+        try (Connection conexion = baseDatos.obtenerConexion()) {
+            return actualizarSiEstadoActual(conexion, turno, estadoEsperado);
+        } catch (SQLException ex) {
+            throw error("actualizar el turno", ex);
+        }
+    }
+
+    @Override
+    public boolean actualizarSiEstadoActual(
+            Connection conexion, Turno turno, EstadoTurno estadoEsperado) {
+        return actualizar(conexion, turno, estadoEsperado);
+    }
+
+    private boolean actualizar(
+            Connection conexion, Turno turno, EstadoTurno estadoEsperado) {
         turno.validar();
         String sql = "UPDATE turnos SET id_gato = ?, id_veterinario = ?, fecha_hora = ?, "
                 + "duracion_minutos = ?, motivo = ?, estado = ?, fecha_cierre = ?, "
-                + "motivo_cancelacion = ?, observaciones = ? WHERE id_turno = ?";
+                + "motivo_cancelacion = ?, observaciones = ? WHERE id_turno = ?"
+                + (estadoEsperado == null ? "" : " AND estado = ?");
         try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
             establecerDatos(sentencia, turno, true);
+            if (estadoEsperado != null) {
+                sentencia.setString(11, estadoEsperado.name());
+            }
             return sentencia.executeUpdate() == 1;
         } catch (SQLException ex) {
             throw error("actualizar el turno", ex);

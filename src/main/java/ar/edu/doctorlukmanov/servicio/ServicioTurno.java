@@ -71,7 +71,7 @@ public final class ServicioTurno {
         try {
             return turnoDao.crear(turno);
         } catch (PersistenciaException ex) {
-            if (esConflictoUnico(ex)) {
+            if (esConflictoHorario(ex)) {
                 throw new TurnoNoDisponibleException(
                         "El veterinario ya tiene un turno en el horario seleccionado.", ex);
             }
@@ -98,23 +98,31 @@ public final class ServicioTurno {
                 null,
                 null,
                 datos.observaciones());
-        return turnoDao.actualizar(actualizado);
+        if (!actualizarSiEstadoActual(actualizado, EstadoTurno.PROGRAMADO)) {
+            throw new TransicionTurnoInvalidaException(
+                    "El turno cambió de estado mientras se estaba editando.");
+        }
+        return true;
     }
 
     public void confirmar(Long idTurno) {
         Turno turno = buscarPorId(idTurno);
+        EstadoTurno estadoEsperado = turno.getEstado();
         turno.confirmar();
-        if (!turnoDao.actualizar(turno)) {
-            throw new EntidadNoEncontradaException("turno", idTurno);
+        if (!actualizarSiEstadoActual(turno, estadoEsperado)) {
+            throw new TransicionTurnoInvalidaException(
+                    "El turno cambió de estado mientras se confirmaba.");
         }
     }
 
     public void cancelar(Long idTurno, String motivo) {
         String motivoValidado = Validador.textoRequerido(motivo, "motivo de cancelación");
         Turno turno = buscarPorId(idTurno);
+        EstadoTurno estadoEsperado = turno.getEstado();
         turno.cancelar(motivoValidado, LocalDateTime.now());
-        if (!turnoDao.actualizar(turno)) {
-            throw new EntidadNoEncontradaException("turno", idTurno);
+        if (!actualizarSiEstadoActual(turno, estadoEsperado)) {
+            throw new TransicionTurnoInvalidaException(
+                    "El turno cambió de estado mientras se cancelaba.");
         }
     }
 
@@ -127,6 +135,7 @@ public final class ServicioTurno {
         baseDatos.ejecutarEnTransaccion(conexion -> {
             Turno turno = turnoDao.buscarPorId(conexion, dto.idTurno())
                     .orElseThrow(() -> new EntidadNoEncontradaException("turno", dto.idTurno()));
+            EstadoTurno estadoEsperado = turno.getEstado();
             LocalDateTime fechaCierre = LocalDateTime.now();
             turno.completar(fechaCierre);
             if (atencionDao.buscarPorTurno(conexion, turno.getIdTurno()).isPresent()) {
@@ -151,8 +160,9 @@ public final class ServicioTurno {
                     && !gatoDao.actualizarPeso(conexion, turno.getIdGato(), atencion.getPesoRegistrado())) {
                 throw new EntidadNoEncontradaException("gato", turno.getIdGato());
             }
-            if (!turnoDao.actualizar(conexion, turno)) {
-                throw new EntidadNoEncontradaException("turno", turno.getIdTurno());
+            if (!turnoDao.actualizarSiEstadoActual(conexion, turno, estadoEsperado)) {
+                throw new TransicionTurnoInvalidaException(
+                        "El turno cambió de estado mientras se completaba.");
             }
             return null;
         });
@@ -232,10 +242,24 @@ public final class ServicioTurno {
         return atencion;
     }
 
-    private boolean esConflictoUnico(Throwable ex) {
+    private boolean actualizarSiEstadoActual(Turno turno, EstadoTurno estadoEsperado) {
+        try {
+            return turnoDao.actualizarSiEstadoActual(turno, estadoEsperado);
+        } catch (PersistenciaException ex) {
+            if (esConflictoHorario(ex)) {
+                throw new TurnoNoDisponibleException(
+                        "El veterinario ya tiene un turno en el horario seleccionado.", ex);
+            }
+            throw ex;
+        }
+    }
+
+    private boolean esConflictoHorario(Throwable ex) {
         Throwable actual = ex;
         while (actual != null) {
-            if (actual.getMessage() != null && actual.getMessage().contains("UNIQUE constraint failed")) {
+            if (actual.getMessage() != null
+                    && (actual.getMessage().contains("UNIQUE constraint failed")
+                    || actual.getMessage().contains("turno_superpuesto"))) {
                 return true;
             }
             actual = actual.getCause();

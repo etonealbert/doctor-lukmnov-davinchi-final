@@ -42,4 +42,39 @@ class ServicioRespaldoTest {
             assertEquals(1, resultado.getInt(1));
         }
     }
+
+    @Test
+    void incluyeCambiosConfirmadosEnWalAunqueExistaUnLectorActivo() throws Exception {
+        Path original = directorioTemporal.resolve("wal/clinica.db");
+        Files.createDirectories(original.getParent());
+        ConexionBaseDatos baseDatos = ConexionBaseDatos.desdeUrl("jdbc:sqlite:" + original);
+        new InicializadorBaseDatos(baseDatos).inicializar();
+
+        Path respaldo;
+        try (Connection escritor = baseDatos.obtenerConexion();
+             Statement sentenciaEscritor = escritor.createStatement()) {
+            sentenciaEscritor.execute("PRAGMA journal_mode = WAL");
+            sentenciaEscritor.execute("PRAGMA wal_autocheckpoint = 0");
+            sentenciaEscritor.executeUpdate("INSERT INTO clientes "
+                    + "(nombre, apellido, dni, telefono) VALUES ('Ana', 'Pérez', '1', '555')");
+            try (Connection lector = baseDatos.obtenerConexion()) {
+                lector.setAutoCommit(false);
+                try (Statement sentenciaLector = lector.createStatement();
+                     ResultSet ignorado = sentenciaLector.executeQuery("SELECT COUNT(*) FROM clientes")) {
+                    assertTrue(ignorado.next());
+                    sentenciaEscritor.executeUpdate("INSERT INTO clientes "
+                            + "(nombre, apellido, dni, telefono) VALUES ('Luis', 'Ruiz', '2', '777')");
+                    respaldo = new ServicioRespaldo(
+                            baseDatos, directorioTemporal.resolve("respaldos-wal")).crearRespaldo();
+                }
+                lector.rollback();
+            }
+        }
+
+        try (Connection conexion = ConexionBaseDatos.desdeUrl("jdbc:sqlite:" + respaldo).obtenerConexion();
+             Statement sentencia = conexion.createStatement();
+             ResultSet resultado = sentencia.executeQuery("SELECT COUNT(*) FROM clientes")) {
+            assertEquals(2, resultado.getInt(1));
+        }
+    }
 }

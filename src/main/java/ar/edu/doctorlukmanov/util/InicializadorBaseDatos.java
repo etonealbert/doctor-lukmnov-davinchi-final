@@ -5,10 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public final class InicializadorBaseDatos {
@@ -23,20 +24,9 @@ public final class InicializadorBaseDatos {
 
     public void inicializar() {
         try (Connection conexion = conexionBaseDatos.obtenerConexion()) {
-            if (existeEsquema(conexion)) {
-                return;
-            }
             ejecutarScript(conexion, leerScript());
         } catch (SQLException ex) {
             throw new PersistenciaException("No fue posible inicializar la base de datos.", ex);
-        }
-    }
-
-    private boolean existeEsquema(Connection conexion) throws SQLException {
-        String sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'version_esquema'";
-        try (Statement sentencia = conexion.createStatement();
-             ResultSet resultado = sentencia.executeQuery(sql)) {
-            return resultado.next();
         }
     }
 
@@ -55,7 +45,7 @@ public final class InicializadorBaseDatos {
         boolean autoCommitOriginal = conexion.getAutoCommit();
         conexion.setAutoCommit(false);
         try (Statement sentencia = conexion.createStatement()) {
-            for (String bloque : quitarComentarios(script).split(";")) {
+            for (String bloque : separarSentencias(quitarComentarios(script))) {
                 String sql = bloque.trim();
                 if (!sql.isEmpty() && !esControlTransaccional(sql) && !sql.startsWith("PRAGMA")) {
                     sentencia.execute(sql);
@@ -79,5 +69,36 @@ public final class InicializadorBaseDatos {
     private boolean esControlTransaccional(String sql) {
         String normalizado = sql.replaceAll("\\s+", " ").trim().toUpperCase();
         return normalizado.equals("BEGIN TRANSACTION") || normalizado.equals("COMMIT");
+    }
+
+    private List<String> separarSentencias(String script) {
+        List<String> sentencias = new ArrayList<>();
+        StringBuilder actual = new StringBuilder();
+        boolean enCadena = false;
+        for (int indice = 0; indice < script.length(); indice++) {
+            char caracter = script.charAt(indice);
+            actual.append(caracter);
+            if (caracter == '\'' && enCadena
+                    && indice + 1 < script.length() && script.charAt(indice + 1) == '\'') {
+                actual.append(script.charAt(++indice));
+                continue;
+            }
+            if (caracter == '\'') {
+                enCadena = !enCadena;
+            }
+            if (caracter == ';' && !enCadena) {
+                String candidata = actual.toString().trim();
+                boolean triggerIncompleto = candidata.toUpperCase().startsWith("CREATE TRIGGER")
+                        && !candidata.toUpperCase().endsWith("END;");
+                if (!triggerIncompleto) {
+                    sentencias.add(candidata.substring(0, candidata.length() - 1));
+                    actual.setLength(0);
+                }
+            }
+        }
+        if (!actual.toString().isBlank()) {
+            sentencias.add(actual.toString().trim());
+        }
+        return sentencias;
     }
 }

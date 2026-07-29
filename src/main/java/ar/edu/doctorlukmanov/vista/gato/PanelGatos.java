@@ -127,7 +127,7 @@ public final class PanelGatos extends JPanel {
                 gato.isActivo() ? "Activo" : "Inactivo"
             }));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 
@@ -247,7 +247,7 @@ public final class PanelGatos extends JPanel {
             }
             accion.accept(filas.get(tabla.convertRowIndexToModel(filaVista)));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 

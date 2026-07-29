@@ -283,6 +283,7 @@ public final class VentanaPrincipal extends JFrame {
             case TURNOS -> panelTurnos.refrescar();
             case VETERINARIOS -> panelVeterinarios.refrescar();
             case TRATAMIENTOS -> panelTratamientos.refrescar();
+            case REPORTES -> panelReportes.refrescar();
             default -> {
             }
         }
@@ -311,7 +312,7 @@ public final class VentanaPrincipal extends JFrame {
             java.nio.file.Path destino = controladorSistema.respaldarBaseDatos();
             Dialogos.informar(this, "El respaldo fue creado en:\n" + destino.toAbsolutePath());
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 }

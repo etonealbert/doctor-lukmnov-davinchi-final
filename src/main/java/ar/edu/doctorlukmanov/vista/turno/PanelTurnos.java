@@ -116,7 +116,7 @@ public final class PanelTurnos extends JPanel {
                 Dialogos.informar(this, "El turno fue programado correctamente.");
             }
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 
@@ -161,7 +161,7 @@ public final class PanelTurnos extends JPanel {
             }));
             actualizarAcciones();
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 
@@ -301,7 +301,7 @@ public final class PanelTurnos extends JPanel {
             }
             accion.accept(filas.get(tabla.convertRowIndexToModel(fila)));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 
@@ -315,6 +315,10 @@ public final class PanelTurnos extends JPanel {
         completar.setEnabled(abierto);
         cancelar.setEnabled(abierto);
         verDetalle.setEnabled(seleccionado != null);
+        verDetalle.setText(seleccionado != null && seleccionado.getEstado() == EstadoTurno.COMPLETADO
+                ? "Ver atención"
+                : seleccionado != null && seleccionado.getEstado() == EstadoTurno.CANCELADO
+                        ? "Ver motivo de cancelación" : "Ver detalle");
     }
 
     private LocalDate fechaSeleccionada() {
