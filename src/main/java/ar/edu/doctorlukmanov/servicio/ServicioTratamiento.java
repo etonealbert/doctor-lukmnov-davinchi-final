@@ -7,8 +7,10 @@ import ar.edu.doctorlukmanov.excepcion.ValidacionException;
 import ar.edu.doctorlukmanov.modelo.Tratamiento;
 import ar.edu.doctorlukmanov.util.Validador;
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 public final class ServicioTratamiento {
 
@@ -20,10 +22,8 @@ public final class ServicioTratamiento {
 
     public Tratamiento crear(TratamientoFormularioDto dto) {
         Validador.requerido(dto, "datos del tratamiento");
-        String nombre = Validador.textoRequerido(dto.nombre(), "nombre");
-        if (tratamientoDao.buscarPorNombre(nombre).isPresent()) {
-            throw new ValidacionException("Ya existe un tratamiento con ese nombre.");
-        }
+        String nombre = normalizarNombre(dto.nombre());
+        verificarNombreDisponible(nombre, null);
         Tratamiento tratamiento = construir(dto, nombre, true, LocalDateTime.now());
         tratamiento.validar();
         return tratamientoDao.crear(tratamiento);
@@ -33,12 +33,8 @@ public final class ServicioTratamiento {
         Validador.requerido(dto, "datos del tratamiento");
         Validador.identificadorRequerido(dto.idTratamiento(), "tratamiento");
         Tratamiento actual = buscarPorId(dto.idTratamiento());
-        String nombre = Validador.textoRequerido(dto.nombre(), "nombre");
-        tratamientoDao.buscarPorNombre(nombre)
-                .filter(encontrado -> !encontrado.getIdTratamiento().equals(dto.idTratamiento()))
-                .ifPresent(encontrado -> {
-                    throw new ValidacionException("Ya existe un tratamiento con ese nombre.");
-                });
+        String nombre = normalizarNombre(dto.nombre());
+        verificarNombreDisponible(nombre, dto.idTratamiento());
         Tratamiento tratamiento = construir(dto, nombre, actual.isActivo(), actual.getFechaRegistro());
         tratamiento.validar();
         return tratamientoDao.actualizar(tratamiento);
@@ -83,5 +79,24 @@ public final class ServicioTratamiento {
                 precio,
                 activo,
                 fechaRegistro);
+    }
+
+    private void verificarNombreDisponible(String nombre, Long idActual) {
+        String clave = claveNombre(nombre);
+        boolean duplicado = tratamientoDao.listarTodos().stream()
+                .anyMatch(existente -> !existente.getIdTratamiento().equals(idActual)
+                        && claveNombre(existente.getNombre()).equals(clave));
+        if (duplicado) {
+            throw new ValidacionException("Ya existe un tratamiento con ese nombre.");
+        }
+    }
+
+    private String normalizarNombre(String nombre) {
+        return Normalizer.normalize(
+                Validador.textoRequerido(nombre, "nombre"), Normalizer.Form.NFC);
+    }
+
+    private String claveNombre(String nombre) {
+        return Normalizer.normalize(nombre, Normalizer.Form.NFC).toUpperCase(Locale.ROOT);
     }
 }

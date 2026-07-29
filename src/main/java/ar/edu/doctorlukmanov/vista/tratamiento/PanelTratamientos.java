@@ -56,7 +56,7 @@ public final class PanelTratamientos extends JPanel {
                 tratamiento.getPrecioReferencia(), tratamiento.isActivo() ? "Activo" : "Inactivo"
             }));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 
@@ -103,7 +103,7 @@ public final class PanelTratamientos extends JPanel {
             }
             accion.accept(filas.get(tabla.convertRowIndexToModel(fila)));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 }

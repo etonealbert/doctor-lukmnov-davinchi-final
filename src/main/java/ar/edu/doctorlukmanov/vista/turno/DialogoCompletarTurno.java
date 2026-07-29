@@ -119,7 +119,7 @@ public final class DialogoCompletarTurno {
                         detalles));
                 return true;
             } catch (ClinicaException ex) {
-                Dialogos.error(padre, ex.getMessage());
+                Dialogos.error(padre, ex);
             }
         }
         return false;
@@ -181,7 +181,7 @@ public final class DialogoCompletarTurno {
                         cantidadValor,
                         precioValor == null ? BigDecimal.ZERO : precioValor));
             } catch (ClinicaException ex) {
-                Dialogos.error(padre, ex.getMessage());
+                Dialogos.error(padre, ex);
             }
         }
         return Optional.empty();

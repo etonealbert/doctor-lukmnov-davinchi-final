@@ -21,6 +21,7 @@ import ar.edu.doctorlukmanov.dto.GatoFormularioDto;
 import ar.edu.doctorlukmanov.dto.TurnoFormularioDto;
 import ar.edu.doctorlukmanov.dto.VeterinarioFormularioDto;
 import ar.edu.doctorlukmanov.excepcion.EntidadNoEncontradaException;
+import ar.edu.doctorlukmanov.excepcion.PersistenciaException;
 import ar.edu.doctorlukmanov.excepcion.TransicionTurnoInvalidaException;
 import ar.edu.doctorlukmanov.excepcion.TurnoNoDisponibleException;
 import ar.edu.doctorlukmanov.excepcion.ValidacionException;
@@ -154,6 +155,42 @@ class ServicioTurnoIntegracionTest {
         assertEquals(EstadoTurno.PROGRAMADO, servicioTurno.buscarPorId(turno.getIdTurno()).getEstado());
         assertEquals(new BigDecimal("4.5"), gatoDao.buscarPorId(gato.getIdGato()).orElseThrow().getPesoActual());
         assertFalse(turnoDao.buscarPorId(turno.getIdTurno()).orElseThrow().getEstado().esTerminal());
+    }
+
+    @Test
+    void unaLecturaObsoletaNoPuedeSobrescribirUnCierreConfirmado() {
+        Turno turno = servicioTurno.programar(turnoDto(LocalDateTime.now().plusDays(1)));
+        Turno lecturaObsoleta = turnoDao.buscarPorId(turno.getIdTurno()).orElseThrow();
+        CierreAtencionDto cierre = new CierreAtencionDto(
+                turno.getIdTurno(), "Paciente sano", null, null, null, null, List.of());
+
+        servicioTurno.completar(cierre);
+        lecturaObsoleta.cancelar("Cancelación tardía", LocalDateTime.now());
+
+        assertFalse(turnoDao.actualizarSiEstadoActual(lecturaObsoleta, EstadoTurno.PROGRAMADO));
+        assertEquals(EstadoTurno.COMPLETADO, servicioTurno.buscarPorId(turno.getIdTurno()).getEstado());
+        assertTrue(atencionDao.buscarPorTurno(turno.getIdTurno()).isPresent());
+    }
+
+    @Test
+    void laBaseDeDatosRechazaSuperposicionesAunqueSeOmitaLaValidacionDelServicio() {
+        LocalDateTime inicio = LocalDateTime.now().plusDays(2).withSecond(0).withNano(0);
+        servicioTurno.programar(turnoDto(inicio));
+        Turno superpuesto = new Turno(
+                null,
+                gato.getIdGato(),
+                veterinario.getIdVeterinario(),
+                inicio.plusMinutes(15),
+                30,
+                "Turno concurrente",
+                EstadoTurno.PROGRAMADO,
+                LocalDateTime.now(),
+                null,
+                null,
+                null);
+
+        assertThrows(PersistenciaException.class, () -> turnoDao.crear(superpuesto));
+        assertEquals(1, turnoDao.listarPorFecha(inicio.toLocalDate()).size());
     }
 
     private TurnoFormularioDto turnoDto(LocalDateTime fechaHora) {

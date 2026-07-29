@@ -23,6 +23,7 @@ public final class AplicacionClinica {
         RegistroErrores.configurar();
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            configurarTextosSwing();
             ConexionBaseDatos baseDatos = ConexionBaseDatos.getInstancia();
             prepararDirectorioBaseDatos(baseDatos.getUrl());
             new InicializadorBaseDatos(baseDatos).inicializar();
@@ -57,5 +58,12 @@ public final class AplicacionClinica {
         if (padre != null) {
             Files.createDirectories(padre);
         }
+    }
+
+    private static void configurarTextosSwing() {
+        UIManager.put("OptionPane.yesButtonText", "Sí");
+        UIManager.put("OptionPane.noButtonText", "No");
+        UIManager.put("OptionPane.okButtonText", "Aceptar");
+        UIManager.put("OptionPane.cancelButtonText", "Cancelar");
     }
 }

@@ -123,6 +123,9 @@ class CrudServiciosIntegracionTest {
         assertThrows(ValidacionException.class,
                 () -> servicioTratamiento.crear(new TratamientoFormularioDto(
                         null, " ecografía ", null, BigDecimal.ZERO)));
+        assertThrows(ValidacionException.class,
+                () -> servicioTratamiento.crear(new TratamientoFormularioDto(
+                        null, "ECOGRAFÍA", null, BigDecimal.ZERO)));
 
         assertTrue(servicioVeterinario.eliminar(veterinario.getIdVeterinario()));
         assertTrue(servicioTratamiento.eliminar(tratamiento.getIdTratamiento()));

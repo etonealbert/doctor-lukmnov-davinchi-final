@@ -29,6 +29,8 @@ class ConexionBaseDatosTest {
             }
             sentencia.executeUpdate("INSERT INTO clientes "
                     + "(nombre, apellido, dni, telefono) VALUES ('Ana', 'Perez', '123', '555')");
+            sentencia.executeUpdate("DROP TRIGGER validar_superposicion_turno_insertar");
+            sentencia.executeUpdate("DROP TRIGGER validar_superposicion_turno_actualizar");
         }
 
         inicializador.inicializar();
@@ -41,6 +43,16 @@ class ConexionBaseDatosTest {
             try (ResultSet resultado = sentencia.executeQuery("SELECT COUNT(*) FROM tratamientos")) {
                 assertTrue(resultado.next());
                 assertEquals(10, resultado.getInt(1));
+            }
+            try (ResultSet resultado = sentencia.executeQuery(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' "
+                            + "AND name LIKE 'validar_superposicion_turno_%'")) {
+                assertTrue(resultado.next());
+                assertEquals(2, resultado.getInt(1));
+            }
+            try (ResultSet resultado = sentencia.executeQuery("SELECT MAX(version) FROM version_esquema")) {
+                assertTrue(resultado.next());
+                assertEquals(2, resultado.getInt(1));
             }
         }
     }

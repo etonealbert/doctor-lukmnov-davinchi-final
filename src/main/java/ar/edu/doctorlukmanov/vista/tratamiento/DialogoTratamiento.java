@@ -46,7 +46,7 @@ public final class DialogoTratamiento {
                         FormularioUtil.decimalOpcional(precio.getText(), "precio de referencia")));
                 return true;
             } catch (ClinicaException ex) {
-                Dialogos.error(padre, ex.getMessage());
+                Dialogos.error(padre, ex);
             }
         }
         return false;

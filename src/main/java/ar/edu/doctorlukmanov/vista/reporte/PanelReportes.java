@@ -52,6 +52,7 @@ public final class PanelReportes extends JPanel {
     private final JComboBox<Gato> gato = new JComboBox<>();
     private final JButton generar = new JButton("Generar");
     private final JLabel estado = new JLabel("Seleccione filtros y genere un reporte.");
+    private final JLabel encabezadoResultado = new JLabel("Resultados");
     private final JTable tabla = new JTable(new ModeloTablaNoEditable(new Object[]{"Resultado"}));
 
     public PanelReportes(
@@ -65,10 +66,14 @@ public final class PanelReportes extends JPanel {
         controlador.listarTipos().forEach(tipo::addItem);
         configurarFechas();
         configurarRenderizadores();
-        cargarSelectores();
+        refrescar();
         add(crearEncabezado(), BorderLayout.NORTH);
         tabla.setAutoCreateRowSorter(true);
-        add(new JScrollPane(tabla), BorderLayout.CENTER);
+        JPanel resultados = new JPanel(new BorderLayout(5, 5));
+        encabezadoResultado.setFont(encabezadoResultado.getFont().deriveFont(Font.BOLD));
+        resultados.add(encabezadoResultado, BorderLayout.NORTH);
+        resultados.add(new JScrollPane(tabla), BorderLayout.CENTER);
+        add(resultados, BorderLayout.CENTER);
         add(estado, BorderLayout.SOUTH);
         actualizarFiltros();
     }
@@ -76,6 +81,32 @@ public final class PanelReportes extends JPanel {
     public void seleccionarTipo(TipoReporte tipoReporte) {
         tipo.setSelectedItem(tipoReporte);
         actualizarFiltros();
+    }
+
+    public void refrescar() {
+        try {
+            Veterinario veterinarioActual = (Veterinario) veterinario.getSelectedItem();
+            Gato gatoActual = (Gato) gato.getSelectedItem();
+            List<Veterinario> veterinarios = controladorVeterinario.listarTodos();
+            List<Gato> gatos = controladorGato.listarTodos();
+            veterinario.removeAllItems();
+            veterinario.addItem(null);
+            veterinarios.forEach(veterinario::addItem);
+            gato.removeAllItems();
+            gato.addItem(null);
+            gatos.forEach(gato::addItem);
+            if (veterinarioActual != null) {
+                veterinarios.stream()
+                        .filter(item -> item.getIdVeterinario().equals(veterinarioActual.getIdVeterinario()))
+                        .findFirst().ifPresent(veterinario::setSelectedItem);
+            }
+            if (gatoActual != null) {
+                gatos.stream().filter(item -> item.getIdGato().equals(gatoActual.getIdGato()))
+                        .findFirst().ifPresent(gato::setSelectedItem);
+            }
+        } catch (ClinicaException ex) {
+            Dialogos.error(this, ex);
+        }
     }
 
     private void configurarFechas() {
@@ -104,17 +135,6 @@ public final class PanelReportes extends JPanel {
         };
         veterinario.setRenderer(renderer);
         gato.setRenderer(renderer);
-    }
-
-    private void cargarSelectores() {
-        try {
-            veterinario.addItem(null);
-            controladorVeterinario.listarTodos().forEach(veterinario::addItem);
-            gato.addItem(null);
-            controladorGato.listarTodos().forEach(gato::addItem);
-        } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
-        }
     }
 
     private JPanel crearEncabezado() {
@@ -183,9 +203,7 @@ public final class PanelReportes extends JPanel {
                     Dialogos.error(PanelReportes.this, "La generación del reporte fue interrumpida.");
                 } catch (ExecutionException ex) {
                     Throwable causa = ex.getCause();
-                    Dialogos.error(PanelReportes.this,
-                            causa instanceof ClinicaException ? causa.getMessage()
-                                    : "Ocurrió un error inesperado al generar el reporte.");
+                    Dialogos.error(PanelReportes.this, causa == null ? ex : causa);
                 } finally {
                     generar.setEnabled(true);
                 }
@@ -242,10 +260,18 @@ public final class PanelReportes extends JPanel {
         }
         tabla.setModel(modelo);
         tabla.setAutoCreateRowSorter(true);
+        if (reporte == TipoReporte.HISTORIA_CLINICA && !filas.isEmpty()) {
+            HistoriaClinicaDto primera = (HistoriaClinicaDto) filas.get(0);
+            encabezadoResultado.setText(
+                    "Historia clínica de " + primera.nombreGato() + " | Responsable: " + primera.nombreCliente());
+        } else {
+            encabezadoResultado.setText(reporte.getDescripcion());
+        }
     }
 
     private void limpiar() {
         tabla.setModel(new ModeloTablaNoEditable(new Object[]{"Resultado"}));
+        encabezadoResultado.setText("Resultados");
         veterinario.setSelectedIndex(0);
         gato.setSelectedIndex(0);
         estado.setText("Filtros restablecidos.");

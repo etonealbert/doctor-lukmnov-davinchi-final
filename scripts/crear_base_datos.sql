@@ -139,6 +139,45 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_turno_abierto_veterinario_fecha
     ON turnos (id_veterinario, fecha_hora)
     WHERE estado IN ('PROGRAMADO', 'CONFIRMADO');
 
+CREATE TRIGGER IF NOT EXISTS validar_superposicion_turno_insertar
+BEFORE INSERT ON turnos
+FOR EACH ROW
+WHEN NEW.estado IN ('PROGRAMADO', 'CONFIRMADO')
+ AND EXISTS (
+    SELECT 1
+    FROM turnos existente
+    WHERE existente.id_veterinario = NEW.id_veterinario
+      AND existente.estado IN ('PROGRAMADO', 'CONFIRMADO')
+      AND datetime(existente.fecha_hora) < datetime(
+          NEW.fecha_hora, '+' || NEW.duracion_minutos || ' minutes')
+      AND datetime(
+          existente.fecha_hora, '+' || existente.duracion_minutos || ' minutes')
+          > datetime(NEW.fecha_hora)
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'turno_superpuesto');
+END;
+
+CREATE TRIGGER IF NOT EXISTS validar_superposicion_turno_actualizar
+BEFORE UPDATE OF id_veterinario, fecha_hora, duracion_minutos, estado ON turnos
+FOR EACH ROW
+WHEN NEW.estado IN ('PROGRAMADO', 'CONFIRMADO')
+ AND EXISTS (
+    SELECT 1
+    FROM turnos existente
+    WHERE existente.id_turno <> NEW.id_turno
+      AND existente.id_veterinario = NEW.id_veterinario
+      AND existente.estado IN ('PROGRAMADO', 'CONFIRMADO')
+      AND datetime(existente.fecha_hora) < datetime(
+          NEW.fecha_hora, '+' || NEW.duracion_minutos || ' minutes')
+      AND datetime(
+          existente.fecha_hora, '+' || existente.duracion_minutos || ' minutes')
+          > datetime(NEW.fecha_hora)
+ )
+BEGIN
+    SELECT RAISE(ABORT, 'turno_superpuesto');
+END;
+
 CREATE VIEW IF NOT EXISTS vista_historia_clinica AS
 SELECT
     g.id_gato,
@@ -197,6 +236,9 @@ GROUP BY tr.id_tratamiento, tr.nombre;
 
 INSERT OR IGNORE INTO version_esquema (id_version, version, descripcion)
 VALUES (1, 1, 'Esquema inicial de la Clínica Veterinaria Doctor Lukmanov');
+
+INSERT OR IGNORE INTO version_esquema (id_version, version, descripcion)
+VALUES (2, 2, 'Validación transaccional de superposición de turnos');
 
 INSERT OR IGNORE INTO tratamientos (nombre, descripcion, precio_referencia, activo)
 VALUES

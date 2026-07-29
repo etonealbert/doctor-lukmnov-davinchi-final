@@ -6,8 +6,8 @@ import ar.edu.doctorlukmanov.util.ConexionBaseDatos;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,12 +34,12 @@ public final class ServicioRespaldo {
         if (!Files.isRegularFile(origen)) {
             throw new PersistenciaException("No se encontró el archivo de base de datos para respaldar.");
         }
-        sincronizarEscriturasPendientes();
         try {
             Files.createDirectories(directorioRespaldos);
             Path destino = directorioRespaldos.resolve(
                     "doctor_lukmanov_" + MARCA_TIEMPO.format(LocalDateTime.now()) + ".db");
-            return Files.copy(origen, destino, StandardCopyOption.COPY_ATTRIBUTES);
+            crearCopiaConsistente(destino.toAbsolutePath().normalize());
+            return destino;
         } catch (IOException ex) {
             throw new PersistenciaException("No fue posible crear el respaldo de la base de datos.", ex);
         }
@@ -57,12 +57,18 @@ public final class ServicioRespaldo {
         return Path.of(ruta).toAbsolutePath().normalize();
     }
 
-    private void sincronizarEscriturasPendientes() {
+    private void crearCopiaConsistente(Path destino) {
+        String rutaEscapada = destino.toString().replace("'", "''");
         try (Connection conexion = baseDatos.obtenerConexion();
              Statement sentencia = conexion.createStatement()) {
-            sentencia.execute("PRAGMA wal_checkpoint(FULL)");
-        } catch (RuntimeException | java.sql.SQLException ex) {
-            throw new PersistenciaException("No fue posible preparar la base de datos para el respaldo.", ex);
+            sentencia.execute("VACUUM INTO '" + rutaEscapada + "'");
+        } catch (RuntimeException | SQLException ex) {
+            try {
+                Files.deleteIfExists(destino);
+            } catch (IOException errorLimpieza) {
+                ex.addSuppressed(errorLimpieza);
+            }
+            throw new PersistenciaException("No fue posible crear el respaldo de la base de datos.", ex);
         }
     }
 }

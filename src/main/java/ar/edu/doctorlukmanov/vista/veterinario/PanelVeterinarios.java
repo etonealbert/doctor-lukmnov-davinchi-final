@@ -57,7 +57,7 @@ public final class PanelVeterinarios extends JPanel {
                 veterinario.getEspecialidad(), veterinario.isActivo() ? "Activo" : "Inactivo"
             }));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 
@@ -104,7 +104,7 @@ public final class PanelVeterinarios extends JPanel {
             }
             accion.accept(filas.get(tabla.convertRowIndexToModel(fila)));
         } catch (ClinicaException ex) {
-            Dialogos.error(this, ex.getMessage());
+            Dialogos.error(this, ex);
         }
     }
 }
