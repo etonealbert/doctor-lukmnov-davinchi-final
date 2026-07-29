@@ -61,6 +61,19 @@ public final class TratamientoDaoSqlite implements TratamientoDao {
     }
 
     @Override
+    public Optional<Tratamiento> buscarPorId(Connection conexion, Long id) {
+        String sql = "SELECT " + COLUMNAS + " FROM tratamientos WHERE id_tratamiento = ?";
+        try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+            sentencia.setLong(1, id);
+            try (ResultSet resultado = sentencia.executeQuery()) {
+                return resultado.next() ? Optional.of(mapear(resultado)) : Optional.empty();
+            }
+        } catch (SQLException ex) {
+            throw error("buscar el tratamiento", ex);
+        }
+    }
+
+    @Override
     public Optional<Tratamiento> buscarPorNombre(String nombre) {
         if (nombre == null) {
             return Optional.empty();

@@ -141,6 +141,19 @@ public final class GatoDaoSqlite implements GatoDao {
         }
     }
 
+    @Override
+    public boolean actualizarPeso(Connection conexion, Long idGato, java.math.BigDecimal peso) {
+        String sql = "UPDATE gatos SET peso_actual = ?, fecha_actualizacion = CURRENT_TIMESTAMP "
+                + "WHERE id_gato = ?";
+        try (PreparedStatement sentencia = conexion.prepareStatement(sql)) {
+            sentencia.setBigDecimal(1, peso);
+            sentencia.setLong(2, idGato);
+            return sentencia.executeUpdate() == 1;
+        } catch (SQLException ex) {
+            throw error("actualizar el peso del gato", ex);
+        }
+    }
+
     private void establecerParametros(PreparedStatement sentencia, Gato gato, boolean actualizacion)
             throws SQLException {
         sentencia.setLong(1, gato.getIdCliente());
