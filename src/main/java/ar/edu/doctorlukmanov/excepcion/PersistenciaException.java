@@ -1,6 +1,6 @@
 package ar.edu.doctorlukmanov.excepcion;
 
-public class PersistenciaException extends RuntimeException {
+public class PersistenciaException extends ClinicaException {
 
     public PersistenciaException(String mensaje) {
         super(mensaje);
